@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 import uvicorn
@@ -36,10 +36,15 @@ class ExperienciaReformulada(BaseModel):
     periodo: str = Field(description="Período de atuação")
     conquistas: List[str] = Field(description="Lista de conquistas e responsabilidades usando verbos de ação e impacto")
 
+class CategoriaHabilidade(BaseModel):
+    categoria: str = Field(description="Ex: Técnicas, Ferramentas, Interpessoais")
+    itens: List[str] = Field(description="Lista de habilidades dessa categoria")
+
 class CurriculoProfissional(BaseModel):
     resumo_profissional_otimizado: str = Field(description="Resumo profissional otimizado e atraente para recrutadores e sistemas ATS")
+    cargo_sugerido: str = Field(description="Cargo sugerido ou otimizado para o currículo")
     experiencias_reformuladas: List[ExperienciaReformulada] = Field(description="Lista de experiências profissionais reformuladas com conquistas de alto impacto")
-    habilidades_organizadas: Dict[str, List[str]] = Field(description="Habilidades categorizadas em grupos (ex: Hard Skills, Soft Skills, Ferramentas)")
+    habilidades_organizadas: List[CategoriaHabilidade] = Field(description="Habilidades categorizadas em grupos")
     formacao_formatada: List[str] = Field(description="Lista de formações acadêmicas formatadas profissionalmente")
     dicas_para_entrevista: List[str] = Field(description="Dicas estratégicas para entrevistas focadas no cargo alvo")
 
@@ -77,9 +82,9 @@ def gerar_curriculo(dados: DadosEntradaCurriculo):
         {[form.model_dump() for form in dados.formacao]}
 
         DIRETRIZES:
-        1. Crie um resumo profissional persuasivo focado no cargo alvo.
+        1. Crie um resumo profissional persuasivo focado no cargo alvo e indique um cargo sugerido adaptado.
         2. Reformule as experiências profissionais em conquistas usando verbos de ação marcantes.
-        3. Organize e categorize as habilidades em grupos lógicos (ex: 'Hard Skills', 'Soft Skills', 'Ferramentas').
+        3. Organize e categorize as habilidades em grupos lógicos (ex: 'Técnicas', 'Ferramentas', 'Interpessoais').
         4. Formate a formação acadêmica de maneira limpa.
         5. Forneça dicas estratégicas e personalizadas de entrevista para o cargo alvo.
         """
