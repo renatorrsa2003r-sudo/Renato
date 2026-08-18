@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import List
 from pydantic import BaseModel, Field
@@ -48,7 +49,7 @@ def gravar_arquivos(diretorio_base: Path, files: List[FileChange]):
         print(f"  [✓] Arquivo atualizado: {item.filepath}")
 
 def sincronizar_git(diretorio_base: Path, commit_msg: str):
-    print("\n4. Sincronizando com o Git...")
+    print("\n4. Sincronizando com o Git e GitHub...")
     try:
         subprocess.run(["git", "add", "."], cwd=diretorio_base, check=True)
         subprocess.run(["git", "commit", "-m", commit_msg], cwd=diretorio_base, check=True)
@@ -56,9 +57,9 @@ def sincronizar_git(diretorio_base: Path, commit_msg: str):
         
         resultado_push = subprocess.run(["git", "push"], cwd=diretorio_base, capture_output=True, text=True)
         if resultado_push.returncode == 0:
-            print("  [✓] Código enviado para o GitHub remoto (git push concluído).")
+            print("  [✓] Código enviado para o GitHub com sucesso (git push concluído)!")
         else:
-            print("  [i] Alterações salvas localmente no Git (push pendente de repositório remoto configurado).")
+            print(f"  [!] Aviso no Push: {resultado_push.stderr}")
     except subprocess.CalledProcessError as e:
         print(f"  [!] Erro na execução do Git: {e}")
 
@@ -90,16 +91,30 @@ def executar_assistente():
 
     print("2. Gerando nova funcionalidade com IA...")
     client = genai.Client()
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=AgentResponse,
-        ),
-    )
-
-    resultado: AgentResponse = response.parsed
+    
+    # Tentativas automáticas em caso de pico de demanda (503)
+    max_tentativas = 3
+    resultado = None
+    
+    for tentativa in range(1, max_tentativas + 1):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=AgentResponse,
+                ),
+            )
+            resultado = response.parsed
+            break
+        except Exception as e:
+            if tentativa < max_tentativas:
+                print(f"  [!] Servidor ocupado. Aguardando 3 segundos para tentar novamente ({tentativa}/{max_tentativas})...")
+                time.sleep(3)
+            else:
+                print(f"Erro ao conectar com a API após {max_tentativas} tentativas: {e}")
+                return
 
     print(f"\nResumo: {resultado.summary}")
     print(f"Commit: {resultado.commit_message}")
